@@ -4,25 +4,39 @@ import matplotlib.pyplot as plt
 
 
 def sampling(times: int, sample_size: int):
-    result_li = [np.random.random(sample_size) for ii in range(times)]
+    result_li = [np.random.uniform(0, 1, sample_size) for ii in range(times)]
     return result_li
 
 
-def get_sample_mean(sample: np.array, transformation: FunctionType):
-    sample = transformation(sample)
+def standardize(sample):
+    mean = 1/2
+    std = ((1/12)/len(sample))**0.5
+    return (sample-mean)/std
+
+
+def get_mean(sample: np.array):
     return np.mean(sample)
 
 
-def draw(trans_name: str, li: list, N_li: list):
-    num = len(li)
-    fig, axs = plt.subplots(nrows=1, ncols=num)
-    fig.set_size_inches(4*num, num+1)
-    fig.suptitle("transformation: %s" % trans_name, fontsize=16)
+def get_mean_li(sample_li: list):
+    return np.array([get_mean(sample=sample) for sample in sample_li])
 
-    task_li = zip(axs, li, N_li)
+
+def draw(trans_name: str, data_li: list, N_li: list):
+    ax_num = len(data_li)
+    figsize = (4.3*ax_num, ax_num)
+
+    fig, axs = plt.subplots(nrows=1, ncols=ax_num,
+                            figsize=figsize, sharex=True, sharey=True)
+    fig.suptitle("transformation: %s" % trans_name, fontsize=20)
+
+    task_li = zip(axs, data_li, N_li)
+
     for task in task_li:
-        task[0].hist(task[1], bins=100)
+        task[0].hist(task[1], bins=25)
         task[0].set_title("N=%d" % task[2])
+
+    fig.tight_layout()
     plt.show()
 
 
@@ -31,26 +45,39 @@ if __name__ == '__main__':
     N1, N2, N3 = 10, 100, 500
     N_li = [N1, N2, N3]
 
-    def sample_no_transformation(x):
+    def trans_none(x):
         """no transformation"""
         return x
 
-    def sample_squared(x):
+    def trans_square(x):
         """squared transformation"""
         return x**2
 
-    def sample_square_root(x):
-        """square_root transformation"""
+    def trans_root(x):
+        """square-root transformation"""
         return x**0.5
 
-    sample_trans_li = [sample_no_transformation,
-                       sample_squared, sample_square_root]
+    trans_li = [trans_none, trans_square, trans_root]
 
-    for sample_trans in sample_trans_li:
-        array_li = []
+    for trans in trans_li:
+        data_li_0 = []
+        data_li_1 = []
+        name_li = ["sample mean", "standardized sample mean"]
+
         for N in N_li:
             sample_li = sampling(times=R, sample_size=N)
-            sample_mean_li = np.array([get_sample_mean(
-                sample=sample, transformation=sample_trans) for sample in sample_li])
-            array_li.append(sample_mean_li)
-        draw(trans_name=sample_trans.__doc__, li=array_li, N_li=N_li)
+            standard_sample_li = [standardize(sample) for sample in sample_li]
+
+            sample_mean_li = get_mean_li(sample_li)
+            sample_mean_li = trans(sample_mean_li)
+
+            standard_mean_li = get_mean_li(standard_sample_li)
+            standard_mean_li = trans(standard_mean_li)
+
+            data_li_0.append(sample_mean_li)
+            data_li_1.append(standard_mean_li)
+
+        draw(trans_name=trans.__doc__+"\n" +
+             name_li[0], data_li=data_li_0, N_li=N_li)
+        draw(trans_name=trans.__doc__+"\n" +
+             name_li[1], data_li=data_li_1, N_li=N_li)
